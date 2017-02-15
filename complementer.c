@@ -6,20 +6,25 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int main(int argc, char **argv){    
+int main(){    
 
    	/* initialize varialbes */
 	int pipeFD, intLength;
     FILE* inputFD;
     char * myfifo = "/tmp/myfifo";
-	char input[1024], complement[1024], filePath[1024];
-    
+	char input[1024], complement[1024], fileP[1024];
+    char * fileToken;
+
     /* get input file */
     printf("Enter filepath for subtrahend: \n");
-    scanf("%s",filePath);
+    scanf("%s",fileP);
     printf("Enter number of bits in each number: \n");
     scanf("%d",&intLength);
-    inputFD = fopen(filePath, O_RDONLY);
+    fileToken = strtok(fileP,"\0");
+    if ((inputFD = fopen(fileToken, "r")) == NULL){
+        printf("file not found\n");
+        exit(1);
+    }   
 
     /* parse and complement data */
     int i = 0;

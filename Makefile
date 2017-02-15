@@ -1,10 +1,10 @@
 all: complementer incrementer adder
 
 complementer: complementer.c
-	gcc -Wall complementer.c -o complementer
+	gcc -Wall -g complementer.c -o complementer
 
 incrementer: incrementer.c 
-	gcc -Wall incrementer.c -o incrementer
+	gcc -Wall -g incrementer.c -o incrementer
 
 adder: adder.c
-	gcc -Wall adder.c -o adder
+	gcc -Wall -g adder.c -o adder
