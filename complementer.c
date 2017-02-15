@@ -6,19 +6,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int startProcesses();
+int startProcesses(char * tok, char * intL);
 
 int main(){    
 
    	/* initialize varialbes */
-	int pipeFD, intLength;
+	int pipeFD;
     FILE* inputFD;
     char * myfifo = "/tmp/myfifo";
 	char input[1024], complement[1024], fileP[1024], fileP2[1024];
-    char * fileToken, * fileToken2;
+    char * fileToken, * fileToken2,  * intLength;
 
     /* get input file */
-
     printf("Enter filepath for minunend: \n");
     scanf("%s",fileP2);
     fileToken2 = strtok(fileP2, "\0"); 
@@ -26,9 +25,11 @@ int main(){
     scanf("%s",fileP);
     fileToken = strtok(fileP,"\0");
 
-
     printf("Enter number of bits in each number: \n");
-    scanf("%d",&intLength);
+    
+    intLength = (char*)malloc(15);
+
+    scanf("%s",intLength);
     
     if ((inputFD = fopen(fileToken, "r")) == NULL){
         printf("file not found\n");
@@ -36,7 +37,8 @@ int main(){
     }   
 
     /* begin the other two processes */
-    startProcesses(fileToken2);
+    startProcesses(fileToken2,intLength);
+   
     /* parse and complement data */
     int i = 0;
     while (fscanf(inputFD,"%s",input) != EOF){
@@ -64,28 +66,34 @@ int main(){
     return 0;
 }
 
-int startProcesses(char * fileToken2){
+int startProcesses(char * fileTok, char * intL){
     
     /* instantiate arguments */
-    char * argv1[2];
+    char * argv1[3];
     argv1[0] = "incrementer";
-    argv1[1] = NULL;
+    argv1[1] = intL;
+    argv1[2] = NULL;
 
-    char * argv2[3];
+    char * argv2[4];
     argv2[0] = "adder";
-    argv2[1] = fileToken2;
-    argv2[2] = NULL;
+    argv2[1] = fileTok;
+    argv2[2] = intL;
+    argv2[3] = NULL;
    
-    int pid = fork(); 
-    int pid2;
+    int pid,pid2; 
 
+    if((pid = fork()) < 0) {
+        perror ("fork failed");
+        exit(1);
+    }
     /* begin other two processes */
     if(pid == 0) { 
         execvp(argv1[0], argv1);
-        fprintf(stderr, "Process could not execute\n.");
     } else {
-        pid2 = fork();
-
+        if((pid2 = fork()) < 0) {
+            perror ("fork failed");
+            exit(1);
+        }
         if(pid2 == 0){
             execvp(argv2[0],argv2);
         }
