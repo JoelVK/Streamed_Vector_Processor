@@ -4,55 +4,37 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
-int startProcesses(char * tok, char * intL);
-int complementer(char * subName, char * subtrahend);
-int incrementer(char * complement);
-int adder();
+#define WRITE 1
+#define READ 0
 
-int main(){    
+int startProcesses(char * fileA,char * fileB, int size);
+int complementer(char * subName, int size);
+int incrementer(int size);
+int adder(char * minunend, int size);
 
-   	/* initialize varialbes */
-	char fileP[1024], fileP2[1024];
-    char * fileToken, * fileToken2,  * intLength;
+int pipeFD1[2], pipeFD2[2];   
 
-    /* get input file */
-    printf("Enter filepath for minunend: \n");
-    scanf("%s",fileP2);
-    fileToken2 = strtok(fileP2, "\0"); 
-    printf("Enter filepath for subtrahend: \n");
-    scanf("%s",fileP);
-    fileToken = strtok(fileP,"\0");
+int main(int argc, char **argv){    
+    int size;
 
-    printf("Enter number of bits in each number: \n");
+    if(argc != 4){
+        printf("useage: ./complementer FILE_A FILE_B BIT_LENGTH\n");
+        exit(0);
+    }
+    /* apparently the '/0' and '/n' add two chars at the end, need to be accounted for */
+    size = atoi(argv[3]) + 2; 
     
-    intLength = (char*)malloc(15);
-
-    scanf("%s",intLength);
-    
-
     /* begin the other two processes */
-    startProcesses(fileToken2,intLength);
-  
-    /* cleanup */
-    free(intLength);
-  
+    startProcesses(argv[1],argv[2],size);
     return 0;
 }
 
-int startProcesses(char * fileTok, char * intL){
+int startProcesses(char * fileA, char * fileB, int size){
     
-
     /* instantiate arguments */
-    int pipeFD1[2], pipeFD2[2];
-    char * argv1[1];
-    argv1[1] = intL;
-
-    char * argv2[2];
-    argv2[1] = fileTok;
-    argv2[2] = intL;
-   
     int pid,pid2; 
 
     /* make complementer to incrementer pipe */
@@ -64,137 +46,159 @@ int startProcesses(char * fileTok, char * intL){
     }
     /* begin other two processes */
     if(pid == 0) {
-        close(pipeFD1[1]);
+        
+        dup2(pipeFD1[READ], STDIN_FILENO);
+        close(pipeFD1[WRITE]);
+        close(pipeFD1[READ]);
         pipe(pipeFD2);
-        if((pid2 = fork()) < 0) {
+
+        if((pid2 = fork()) < READ) {
             perror ("fork failed");
-            exit(1);
+            exit(0);
         }
-        if(pid2 == 0){
-            close(pipeFD2[1]);
-            adder(argv2);
+        if(pid2 == READ){
+            dup2(pipeFD2[READ], STDIN_FILENO);
+            close(pipeFD2[READ]);
+            adder(fileA,size);
         }
         else{
-            close(pipeFD2[0]);
-            incrementer();
-        }                                                                                
+            dup2(pipeFD2[WRITE],STDOUT_FILENO);
+            close(pipeFD1[READ]);
+            close(pipeFD2[WRITE]);
+            close(pipeFD2[WRITE]);
+            close(pipeFD2[READ]);
+            incrementer(size);
+        }                                                                               
     }
     else{
-        close(pipeFD1[0])
-        complementer();
+        dup2(pipeFD1[WRITE],STDOUT_FILENO);
+        close(pipeFD1[READ]);
+        close(pipeFD1[WRITE]);
+        complementer(fileB,size);
     }
     return 0;
 }
 
-int complementer(char * subName, char * subtrahend){
+int complementer(char * subName,int size){
 	/* parse and complement data */
     int i = 0;
+    char subtrahend[size];
     FILE * inputFD;
     if ((inputFD = fopen(subName, "r")) == NULL){
+        fprintf(stderr,"file not found\n");
+        exit(1);
+    }  
+
+    while (fgets(subtrahend,size,inputFD) != NULL){
+        while(i < size -2){
+           if(subtrahend[i] == '1'){
+               subtrahend[i] = '0';
+            } 
+           else if(subtrahend[i] == '0'){
+               subtrahend[i] = '1';
+            } 
+            i++;
+        }
+        fprintf(stderr,"subtrahend: %s \n", subtrahend);
+        write(STDOUT_FILENO,subtrahend,size);
+        i = 0;
+    }
+    close(pipeFD1[READ]);
+    close(pipeFD1[WRITE]);
+    fclose(inputFD);
+    return 0;
+}
+
+int incrementer(int size){
+      
+    char complement[size]; 
+    int i = size-3;
+
+    while(1){
+        read(STDIN_FILENO,complement,sizeof(complement));
+
+        while(i >= 0){
+            if(complement[i] == '1'){
+                complement[i] = '0';
+            }
+            else{
+                complement[i] = '1';
+                break;
+            }
+            i--;
+        }
+        write(STDOUT_FILENO,complement,size);
+    }
+    close(pipeFD2[READ]);
+    close(pipeFD2[WRITE]);
+	exit(0);
+}
+
+int adder(char * minunend, int size){
+    
+    char complement[size], minund[size];   
+    FILE * inputFD;
+
+    if ((inputFD = fopen(minunend, "r")) == NULL){
         printf("file not found\n");
         exit(1);
     }  
 
-    while (fscanf(inputFD,"%s",subtrahend) != EOF){
-        while(subtrahend[i] != '\0') {
-            if(subtrahend[i] == '1'){
-                subtrahend[i] = '0';
-            } else {
-                subtrahend[i] = '1';
-            }
-            i++;
-        }
-    }
-
-}
-
-int incrementer(char * complement){
-    
-    char complement[1024];
-
     int i = 0;
-    int j = 0;
+    char carry = '0';
 
-    while(i < (int)strlen(complement)){
-        while(j <= atoi(argv[1])){
-            if(complement[i] == 1){
-                complement[i] = 0;
-                i++;
-                j++;
-            }
-            else if(complement[i] == 0){
-                complement[i] = 1;
-                i += (atoi(argv[1]) - j);
-                break;
-            }
-        }
-        j = 0;
-    }
-	return 0;
-}
-
-int adder(){
-    
-    char complement[1024], minunend[1024], result[1024];
-
-    int i = 0;
-    int j = 0;
-    int carry = 0;
-
-    while(i < (int)strlen(complement)){
+    while(fgets(minund,size,inputFD) != NULL){
+     
+        read(STDIN_FILENO,complement,sizeof(complement));   
         
-        /* start at the least significant bit in nuber */
-        i += atoi(argv[2]);
+        /* start at the least significant bit in number */
+        i = size-3;
 
-        while(j <= atoi(argv[2])){
-            if(complement[i] == 1 && minunend[i] == 1){
-                if(carry == 1){
-                    result[i] = 1;
-                    carry = 1;
+        while(i >= 0){
+            if(complement[i] =='1'&& minund[i] == '1'){
+                if(carry =='1'){
+                    complement[i] ='1';
+                    carry ='1';
                 }
                 else{
-                    result[i] = 0;
-                    carry = 1;
+                    complement[i] ='0';
+                    carry ='1';
                 }
             }
-            else if(complement[i] == 1 && minunend[i] == 0){
-                if(carry == 1){
-                    result[i] = 0;
-                    carry = 1;
+            else if(complement[i] =='1'&& minund[i] == '0'){
+                if(carry =='1'){
+                    complement[i] ='0';
+                    carry ='1';
                 }
                 else{
-                    result[i] = 1;
-                    carry = 0;
+                    complement[i] ='1';
+                    carry ='0';
                 }
             }
-            else if(complement[i] == 0 && minunend[i] == 1){
-                if(carry == 1){
-                    result[i] = 0;
-                    carry = 1;
+            else if(complement[i] =='0'&& minund[i] == '1'){
+                if(carry =='1'){
+                    complement[i] ='0';
+                    carry ='1';
                 }
                 else{
-                    result[i] = 1;
-                    carry = 0;
+                    complement[i] ='1';
+                    carry ='0';
                 }
             }
-            else if(complement[i] == 0 && minunend[i] == 0){
-                if(carry == 1){
-                    result[i] = 1;
-                    carry = 0;
+            else if(complement[i] =='0'&& minund[i] == '0'){
+                if(carry =='1'){
+                    complement[i] ='1';
+                    carry ='0';
                 }
                 else{
-                    result[i] = 0;
-                    carry = 0;
+                    complement[i] ='0';
+                    carry ='0';
                 }
             }
 			i--;
-			j++;
-			
         }
-		i += atoi(argv[2]);
-		j = 0;
+        write(STDOUT_FILENO,complement,size);
     }
-    printf("%s", result);
-
-	return 0;
+    fclose(inputFD);
+	exit(0);
 }
