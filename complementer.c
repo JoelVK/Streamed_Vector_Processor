@@ -99,7 +99,6 @@ int complementer(char * subName,int size){
             } 
             i++;
         }
-        fprintf(stderr,"subtrahend: %s \n", subtrahend);
         write(STDOUT_FILENO,subtrahend,size);
         i = 0;
     }
@@ -116,6 +115,7 @@ int incrementer(int size){
 
     while(1){
         read(STDIN_FILENO,complement,sizeof(complement));
+        i = size-3;
 
         while(i >= 0){
             if(complement[i] == '1'){
@@ -153,6 +153,7 @@ int adder(char * minunend, int size){
         
         /* start at the least significant bit in number */
         i = size-3;
+        carry = '0';
 
         while(i >= 0){
             if(complement[i] =='1'&& minund[i] == '1'){
