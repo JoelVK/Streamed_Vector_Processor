@@ -136,7 +136,7 @@ int incrementer(int size){
 
 int adder(char * minunend, int size){
     
-    char complement[size], minund[size];   
+    char complement[size], minund[size], result[size+1];   
     FILE * inputFD;
 
     if ((inputFD = fopen(minunend, "r")) == NULL){
@@ -155,50 +155,55 @@ int adder(char * minunend, int size){
         i = size-3;
         carry = '0';
 
+        /*copies complement into result, which is one byte bigger, to allow
+         * for a NULL byte at the end for printing */
+        memcpy(result, complement,size);
+
         while(i >= 0){
             if(complement[i] =='1'&& minund[i] == '1'){
                 if(carry =='1'){
-                    complement[i] ='1';
+                   result[i] ='1';
                     carry ='1';
                 }
                 else{
-                    complement[i] ='0';
+                   result[i] ='0';
                     carry ='1';
                 }
             }
             else if(complement[i] =='1'&& minund[i] == '0'){
                 if(carry =='1'){
-                    complement[i] ='0';
+                   result[i] ='0';
                     carry ='1';
                 }
                 else{
-                    complement[i] ='1';
+                   result[i] ='1';
                     carry ='0';
                 }
             }
             else if(complement[i] =='0'&& minund[i] == '1'){
                 if(carry =='1'){
-                    complement[i] ='0';
+                   result[i] ='0';
                     carry ='1';
                 }
                 else{
-                    complement[i] ='1';
+                   result[i] ='1';
                     carry ='0';
                 }
             }
             else if(complement[i] =='0'&& minund[i] == '0'){
                 if(carry =='1'){
-                    complement[i] ='1';
+                   result[i] ='1';
                     carry ='0';
                 }
                 else{
-                    complement[i] ='0';
+                   result[i] ='0';
                     carry ='0';
                 }
             }
 			i--;
         }
-        write(STDOUT_FILENO,complement,size);
+        result[size] = '\0';
+        printf("%s",result);
     }
     fclose(inputFD);
 	exit(0);
